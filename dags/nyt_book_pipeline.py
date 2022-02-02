@@ -9,16 +9,23 @@ import requests
 import json
 import pandas as pd
 
+
+# get emails in config/variables_config.json
+try:
+    dag_config = Variable.get('variables_config', deserialize_json=True)
+    email_list = dag_config['email_list']
+except:
+    email_list = ['yan.test@gmail.com', 'zheyan.test@gmail.com', 'zheyan.test@yahoo.com']
+    raise Warning("You didn't set up variables_fig, using default email_list ['yan.test@gmail.com', 'zheyan.test@gmail.com', 'zheyan.test@yahoo.com']")
+
 default_args = {
     "owner": "airflow",
     "email_on_failure": False,
     "email_on_retry": False,
     "email": "admin@localhost.com",
     "retries": 1,
-    "retry_delay": datetime.timedelta(minutes=5)
+    "retry_delay": datetime.timedelta(minutes=2)
 }
-
-email_list = ['yan.test@gmail.com', 'zheyan.test@gmail.com', 'zheyan.test@yahoo.com']
 
 def download_books():
     my_key = 'CXuUEJbjPaKIkPDIuzgIuijzx2YGgg4J'
@@ -68,7 +75,8 @@ def check_email(**context):
     email_df = pd.read_csv('/opt/airflow/dags/files/email_sent.csv')
     email_df = email_df[(email_df['year']==year)&(email_df['week']==week)]
     email_sublist = [email for email in email_list if email not in email_df.email.to_list()]
-
+    if not email_sublist:
+        raise ValueError('All the listed emails recieved this week')
     return ','.join(email_sublist)
 
 
