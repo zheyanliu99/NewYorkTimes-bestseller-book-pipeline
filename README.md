@@ -38,6 +38,9 @@ When all containers are healthy, Open http://localhost:8080
 **Import variables in the UI by Admin -> variables**, variables file is config/variables_config.json. If you don't do this step, it will use the default email list ['yan.test@gmail.com', 'zheyan.test@gmail.com', 'zheyan.test@yahoo.com']. You succeed if you see something like this.
 ![image](https://user-images.githubusercontent.com/90377706/152095188-f6cc7018-b370-40b0-956c-ff22650c0047.png)
 
+And the final directory should look like this
+![image](https://user-images.githubusercontent.com/90377706/152096916-7fef7bfb-2483-4714-ad6e-7362e79f860e.png)
+
 That's all for the setup, contact me if you met any issues or refer to this video https://www.youtube.com/watch?v=aTaytcxy2Ck&t=403s.
 
 ## Examples
