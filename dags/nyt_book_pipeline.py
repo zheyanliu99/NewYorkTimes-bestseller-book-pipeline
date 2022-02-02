@@ -58,7 +58,7 @@ def download_books():
         }
 
         book_df = pd.DataFrame(book_dict, columns = ['title', 'author', 'publisher', 'price', 'description', 'amazon_product_url'])
-        book_df.to_csv(f'/opt/airflow/dags/files/{book_type}_{date}.csv', index = False)
+        book_df.to_csv(f'/opt/airflow/dags/files/{book_type}.csv', index = False)
         
     return (year, week)
 
@@ -99,7 +99,8 @@ with DAG("nyt_book_pipeline", start_date=datetime.datetime(2021, 1 ,1),
         task_id='send_emails',
         to="{{ task_instance.xcom_pull(task_ids='check_emails') }}",
         subject="New York Times Weekly Bestseller Books",
-        html_content="<h3>forex_data_pipeline</h3>"
+        files = ['/opt/airflow/dags/files/combined-print-and-e-book-nonfiction.csv', '/opt/airflow/dags/files/combined-print-and-e-book-fiction.csv'],
+        html_content="<h3>Check out attachments for the bestseller books this week!</h3>"
     )
 
     update_sent_emails = PythonOperator(
