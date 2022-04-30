@@ -105,6 +105,7 @@ def get_crypto():
 
     # Insert values to df
     execute_values(conn, cr_df, 'crytpo_daily')
+    cr_df.to_csv(f'/opt/airflow/dags/files/crypto_{date}.csv', index = False)
         
 
 def check_email(**context):
@@ -145,17 +146,17 @@ with DAG("crpto_pipline", start_date=datetime.datetime(2021, 1 ,1),
         python_callable=check_email
     )
 
-    # send_emails = EmailOperator(
-    #     task_id='send_emails',
-    #     to="{{ task_instance.xcom_pull(task_ids='check_emails') }}",
-    #     subject="New York Times Weekly Bestseller Books",
-    #     files = ['/opt/airflow/dags/files/combined-print-and-e-book-nonfiction.csv', '/opt/airflow/dags/files/combined-print-and-e-book-fiction.csv'],
-    #     html_content="<h3>Check out attachments for the bestseller books this week!</h3>"
-    # )
+    send_emails = EmailOperator(
+        task_id='send_emails',
+        to="{{ task_instance.xcom_pull(task_ids='check_emails') }}",
+        subject="New York Times Weekly Bestseller Books",
+        files = ['/opt/airflow/dags/files/crypto_{date}.csv'],
+        html_content="<h3>Check out Crpto price!</h3>"
+    )
 
     # update_sent_emails = PythonOperator(
     #     task_id="update_sent_emails",
     #     python_callable=update_sent_emails
     # )
     
-    get_crypto > check_emails
+    get_crypto >> check_emails >> send_emails
