@@ -9,6 +9,7 @@ import pandas as pd
 
 dsn = "postgresql://zl3119:1947@w4111.cisxo09blonu.us-east-1.rds.amazonaws.com/proj1part2"
 conn = psycopg2.connect(dsn)
+cur = conn.cursor()
 
 
 import datetime
@@ -123,14 +124,9 @@ def check_email(**context):
 
 
 def update_sent_emails(**context):
-    with open(r'/opt/airflow/dags/files/email_sent.csv', 'a') as file:
-        writer = csv.writer(file)
-        year, week = context['ti'].xcom_pull(task_ids='downloading_books')
-        for email in context['ti'].xcom_pull(task_ids='check_emails').split(','):
-            if email:
-                newrow = [email, year, week]
-                writer.writerow(newrow)
-
+    for email in context['ti'].xcom_pull(task_ids='check_emails').split(','):
+        cur.execute("INSERT INTO email_sent values(%s, %s)", (date, email))
+    conn.commit()
 
 with DAG("crpto_pipline", start_date=datetime.datetime(2021, 1 ,1), 
     schedule_interval="@daily", default_args=default_args, catchup=False) as dag:
@@ -149,14 +145,14 @@ with DAG("crpto_pipline", start_date=datetime.datetime(2021, 1 ,1),
     send_emails = EmailOperator(
         task_id='send_emails',
         to="{{ task_instance.xcom_pull(task_ids='check_emails') }}",
-        subject="New York Times Weekly Bestseller Books",
-        files = ['/opt/airflow/dags/files/crypto_{date}.csv'],
-        html_content="<h3>Check out Crpto price!</h3>"
+        subject="Crypto price for Yesterday",
+        files = [f'/opt/airflow/dags/files/crypto_{date}.csv'],
+        html_content="<h3>Check out Crypto price!</h3>"
     )
 
-    # update_sent_emails = PythonOperator(
-    #     task_id="update_sent_emails",
-    #     python_callable=update_sent_emails
-    # )
+    update_sent_emails = PythonOperator(
+        task_id="update_sent_emails",
+        python_callable=update_sent_emails
+    )
     
-    get_crypto >> check_emails >> send_emails
+    get_crypto >> check_emails >> send_emails >> update_sent_emails
