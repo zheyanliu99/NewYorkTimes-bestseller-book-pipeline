@@ -15,7 +15,9 @@ import datetime
 import csv
 import requests
 import json
-import pandas as pd
+
+# dd/mm/YY
+date = (datetime.date.today()- datetime.timedelta(days = 1)).strftime("%Y-%m-%d")
 
 
 # function to insert pandas df to database
@@ -62,7 +64,7 @@ default_args = {
 }
 
 def get_crypto():
-    date = '2022-04-28'
+    # date = '2022-04-28'
     url = 'https://api.polygon.io/v2/aggs/grouped/locale/global/market/crypto/{}?adjusted=true&apiKey=2gEOah0DjDSI9ImMCR_0BL5TSJkvlC4z'.format(date)
     r = requests.get(url)
     data = r.json()
@@ -106,24 +108,27 @@ def get_crypto():
         
 
 def check_email(**context):
-    year, week = context['ti'].xcom_pull(task_ids='downloading_books')
+    
     # email_list = ['yan.test@gmail.com', 'zheyan.test@gmail.com']
-    email_df = pd.read_csv('/opt/airflow/dags/files/email_sent.csv')
-    email_df = email_df[(email_df['year']==year)&(email_df['week']==week)]
-    email_sublist = [email for email in email_list if email not in email_df.email.to_list()]
-    if not email_sublist:
-        raise ValueError('All the listed emails recieved this week')
-    return ','.join(email_sublist)
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM email_sent WHERE date = %s", (date, ))
+    sent_emails = cur.fetchall()
+    sent_emails_list = [email[1] for email in sent_emails]
+
+    sending_emails = [email for email in email_list if email not in sent_emails_list]
+    if not sending_emails:
+        raise ValueError('All the listed emails recieved crypto info today')
+    return ','.join(sending_emails)
 
 
-# def update_sent_emails(**context):
-#     with open(r'/opt/airflow/dags/files/email_sent.csv', 'a') as file:
-#         writer = csv.writer(file)
-#         year, week = context['ti'].xcom_pull(task_ids='downloading_books')
-#         for email in context['ti'].xcom_pull(task_ids='check_emails').split(','):
-#             if email:
-#                 newrow = [email, year, week]
-#                 writer.writerow(newrow)
+def update_sent_emails(**context):
+    with open(r'/opt/airflow/dags/files/email_sent.csv', 'a') as file:
+        writer = csv.writer(file)
+        year, week = context['ti'].xcom_pull(task_ids='downloading_books')
+        for email in context['ti'].xcom_pull(task_ids='check_emails').split(','):
+            if email:
+                newrow = [email, year, week]
+                writer.writerow(newrow)
 
 
 with DAG("crpto_pipline", start_date=datetime.datetime(2021, 1 ,1), 
@@ -135,11 +140,10 @@ with DAG("crpto_pipline", start_date=datetime.datetime(2021, 1 ,1),
     )
 
     
-
-    # check_emails = PythonOperator(
-    #     task_id="check_emails",
-    #     python_callable=check_email
-    # )
+    check_emails = PythonOperator(
+        task_id="check_emails",
+        python_callable=check_email
+    )
 
     # send_emails = EmailOperator(
     #     task_id='send_emails',
@@ -154,4 +158,4 @@ with DAG("crpto_pipline", start_date=datetime.datetime(2021, 1 ,1),
     #     python_callable=update_sent_emails
     # )
     
-    get_crypto
+    get_crypto > check_emails
